@@ -1,3 +1,53 @@
+// takes the form field value and returns true on valid number
+function valid_credit_card(value) {
+  // accept only digits, dashes or spaces
+	if (/[^0-9-\s]+/.test(value)) return false;
+
+	// The Luhn Algorithm. It's so pretty.
+	var nCheck = 0, nDigit = 0, bEven = false;
+	value = value.replace(/\D/g, "");
+
+	for (var n = value.length - 1; n >= 0; n--) {
+		var cDigit = value.charAt(n),
+			  nDigit = parseInt(cDigit, 10);
+
+		if (bEven) {
+			if ((nDigit *= 2) > 9) nDigit -= 9;
+		}
+
+		nCheck += nDigit;
+		bEven = !bEven;
+	}
+
+	return (nCheck % 10) == 0;
+}
+
+/*
+* Validates the expiration date
+*/
+function validExpirationDate( date ) {
+	var currentDate = new Date(),
+		currentMonth = currentDate.getMonth() + 1,//Zero based index
+		currentYear = currentDate.getFullYear(),
+		expirationMonth = Number(date.substr(0,2)), //01/
+		expirationYear = Number(date.substr(3,date.length)); //starts at 3 after month's slash
+
+	//The expiration date must be atleast one month ahead of current date
+	if((expirationYear < currentYear) || (expirationYear == currentYear && expirationMonth <= currentMonth)){
+		return false;
+	}else{
+		return true;
+	}
+}
+
+/*
+* Validates the security code(cvv)
+*/
+function validateCvv( cvv ) {
+	//The cvv must be atleast 3 digits
+	return cvv.length > 2;
+}
+
 /*
 * On Document Ready
 */
@@ -8,7 +58,8 @@
 		paymentButton = $("#submit-payment"),
 		ccInputs = $(".cc-input"),
 		timerInterval = 1000,
-		timer;
+		timer,
+		numberOk = false, expDateOk = false, cvvOk = false;
 
 	//Set the masks
 	//Visa - 13-16, Mastercard - 16-19, American Express - 15 So minimum 13 and maximum 19 with options
@@ -55,15 +106,50 @@
 	});
 
 	function finishTyping(id, value) {
+		var validationValue = value.replace( / /g,'' ); //replace any spaces or special characters
 		switch(id) {
 			case "cc-number":
-				console.log('number');
+				//If the validation length is higher than 0 check with valid_credit_card
+				if(validationValue.length > 0) {
+					numberOk = valid_credit_card(validationValue);
+				}
+				if(numberOk){
+					number.removeClass('error');
+					expDate.focus();
+				}else{
+					number.addClass('error');
+				}
 				break;
 			case "cc-expiration-date":
-				console.log('date');
+
+				//If there are no 'm' or 'y' characters in the string proceed with validation
+				if(validationValue.indexOf("m") == -1 && validationValue.indexOf("y") == -1) {
+					expDateOk = validExpirationDate(validationValue);
+					if(expDateOk){
+						expDate.removeClass('error');
+						cvv.focus();
+					}else{
+						expDate.addClass('error');
+					}					
+				}
 				break;
 			case "cc-cvv":
+				//validation
+				cvvOk = validateCvv(validationValue);
+				if(cvvOk){
+					cvv.removeClass('error');
+					paymentButton.focus();
+				}else{
+					cvv.addClass('error');
+				}	
 				break;		
+		}
+
+		//Update the payment button status
+		if(numberOk && expDateOk && cvvOk ){
+			paymentButton.removeClass('disabled');
+		}else{
+			paymentButton.addClass('disabled');
 		}
 	}
 
