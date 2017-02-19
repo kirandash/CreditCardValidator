@@ -49,6 +49,23 @@ function validateCvv( cvv ) {
 }
 
 /*
+* Retrieve the card issuing bank.
+*/
+function getCardType( ccNumber ) {
+	// Define regular expressions in an object
+	var cardPatterns = {
+            visa: /^4[0-9]{12}(?:[0-9]{3})?$/,
+            mastercard: /^5[1-5][0-9]{14}$/,
+            amex: /^3[47][0-9]{13}$/
+        };
+    for (var cardPattern in cardPatterns){
+    	if(cardPatterns[cardPattern].test(ccNumber)) {
+    		return cardPattern;
+    	}
+    }
+}
+
+/*
 * On Document Ready
 */
 (function($) { 
@@ -106,19 +123,28 @@ function validateCvv( cvv ) {
 	});
 
 	function finishTyping(id, value) {
-		var validationValue = value.replace( / /g,'' ); //replace any spaces or special characters
+		var validationValue = value.replace( / /g,'' ), //replace any spaces or special characters
+			cardType = getCardType(validationValue),
+			cardClass = ( cardType != false )? "cc-"+ cardType: "cc-generic"; //If card found use cc-visa etc. else generic
+
 		switch(id) {
 			case "cc-number":
+				
 				//If the validation length is higher than 0 check with valid_credit_card
 				if(validationValue.length > 0) {
-					numberOk = valid_credit_card(validationValue);
+					numberOk = valid_credit_card(validationValue) && getCardType( validationValue );
 				}
+
 				if(numberOk){
 					number.removeClass('error');
-					expDate.focus();
+					expDate.parent().fadeIn("fast", function(){ expDate.focus(); });
 				}else{
 					number.addClass('error');
 				}
+
+				//Switch the card icons depending on the type
+				number.parent().attr("class", cardClass);
+
 				break;
 			case "cc-expiration-date":
 
@@ -127,7 +153,7 @@ function validateCvv( cvv ) {
 					expDateOk = validExpirationDate(validationValue);
 					if(expDateOk){
 						expDate.removeClass('error');
-						cvv.focus();
+						cvv.parent().fadeIn("fast", function(){ cvv.focus(); });
 					}else{
 						expDate.addClass('error');
 					}					
